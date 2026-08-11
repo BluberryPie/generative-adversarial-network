@@ -47,6 +47,7 @@ def main():
     G_losses: list[float] = []
     D_real_probs: list[float] = []
     D_fake_probs: list[float] = []
+    G_grad_norms: list[float] = []
 
     for _ in trange(config.num_train_iterations):
         # Update D
@@ -74,15 +75,23 @@ def main():
         loss_G = bce_loss_fn(D(G(Z)), target_G) * sign_G
         optim_G.zero_grad()
         loss_G.backward()
+        G_grad_norms.append(
+            torch.nn.utils.get_total_norm(
+                [p.grad for p in G.parameters() if p.grad is not None]
+            ).item()
+        )
         optim_G.step()
 
         D_losses.append(loss_D.item())
         G_losses.append(loss_G.item())
 
     plot_loss_curves(
-        D_losses, G_losses, title=f"{config.use_non_saturating_loss = }", stride=10
+        D_losses,
+        G_losses,
+        title=f"D/G loss curves ({'non-saturating' if config.use_non_saturating_loss else 'minimax'} G loss)",
+        stride=10,
     )
-    plot_D_probs(D_real_probs, D_fake_probs)
+    plot_D_probs(D_real_probs, D_fake_probs, G_grad_norms)
 
 
 if __name__ == "__main__":
