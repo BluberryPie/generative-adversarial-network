@@ -1,4 +1,8 @@
+from pathlib import Path
+
+import imageio
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def plot_loss_curves(
@@ -37,3 +41,11 @@ def plot_D_probs(
 
     plt.title("D confidence & G gradient norm over training")
     plt.show()
+
+
+def make_animation(frames: list[np.ndarray], path: Path, fps: int = 5) -> None:
+    # Dtype conversion from float32 to uint8
+    converted_frames = [
+        np.clip(np.round(frame * 255), 0, 255).astype(np.uint8) for frame in frames
+    ]
+    imageio.mimsave(path, converted_frames, fps=fps)

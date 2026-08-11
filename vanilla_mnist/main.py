@@ -1,11 +1,23 @@
+from pathlib import Path
+
+import numpy as np
 import torch
 import torch.nn as nn
+import torchvision
 from tqdm import trange
 
 from config import Config
 from data import load_mnist
 from model import Generator, Discriminator
-from visualize import plot_loss_curves, plot_D_probs
+from visualize import plot_loss_curves, plot_D_probs, make_animation
+
+
+@torch.no_grad()
+def sample_grid(G: Generator, Z: torch.Tensor, nrows: int) -> np.ndarray:
+    generated_images = G(Z).reshape(Z.shape[0], 1, 28, 28)  # Assumes MNIST shape
+    grid = torchvision.utils.make_grid(generated_images, nrow=nrows)
+    grid = grid.permute(1, 2, 0).numpy()
+    return grid
 
 
 def main():
@@ -48,8 +60,10 @@ def main():
     D_real_probs: list[float] = []
     D_fake_probs: list[float] = []
     G_grad_norms: list[float] = []
+    frames: list[np.ndarray] = []
+    Z_fixed = torch.randn(size=(config.nrows_per_grid**2, config.latent_dim))
 
-    for _ in trange(config.num_train_iterations):
+    for i in trange(config.num_train_iterations):
         # Update D
         for _ in range(config.D_steps):
             try:
@@ -84,6 +98,8 @@ def main():
 
         D_losses.append(loss_D.item())
         G_losses.append(loss_G.item())
+        if (i + 1) % (config.num_train_iterations // config.num_anim_frames) == 0:
+            frames.append(sample_grid(G, Z_fixed, nrows=config.nrows_per_grid))
 
     plot_loss_curves(
         D_losses,
@@ -92,6 +108,7 @@ def main():
         stride=10,
     )
     plot_D_probs(D_real_probs, D_fake_probs, G_grad_norms)
+    make_animation(frames, Path(__file__).parent / config.result_dir / "animation.gif")
 
 
 if __name__ == "__main__":
