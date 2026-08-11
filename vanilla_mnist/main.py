@@ -5,7 +5,7 @@ from tqdm import trange
 from config import Config
 from data import load_mnist
 from model import Generator, Discriminator
-from visualize import plot_loss_curves
+from visualize import plot_loss_curves, plot_D_probs
 
 
 def main():
@@ -45,8 +45,11 @@ def main():
 
     D_losses: list[float] = []
     G_losses: list[float] = []
+    D_real_probs: list[float] = []
+    D_fake_probs: list[float] = []
 
     for _ in trange(config.num_train_iterations):
+        # Update D
         for _ in range(config.D_steps):
             try:
                 X, _ = next(train_data_iter)
@@ -61,6 +64,12 @@ def main():
             optim_D.zero_grad()
             loss_D.backward()
             optim_D.step()
+
+        with torch.no_grad():
+            D_real_probs.append(D(X).mean().item())
+            D_fake_probs.append(D(G(Z)).mean().item())
+
+        # Update G
         Z = torch.randn(size=(config.batch_size, config.latent_dim))
         loss_G = bce_loss_fn(D(G(Z)), target_G) * sign_G
         optim_G.zero_grad()
@@ -73,6 +82,7 @@ def main():
     plot_loss_curves(
         D_losses, G_losses, title=f"{config.use_non_saturating_loss = }", stride=10
     )
+    plot_D_probs(D_real_probs, D_fake_probs)
 
 
 if __name__ == "__main__":
