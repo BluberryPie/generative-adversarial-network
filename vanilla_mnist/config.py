@@ -5,6 +5,9 @@ from dataclasses import dataclass, field
 class Config:
     random_seed: int = 42
     data_dir: str = "data"
+    data_dim: int = 784  # MNIST: 28x28
     batch_size: int = 32
     latent_dim: int = 16
-    hidden_dims: list[int] = field(default_factory=lambda: [64, 256])
+    G_hidden_dims: list[int] = field(default_factory=lambda: [64, 256])
+    D_hidden_dims: list[int] = field(default_factory=lambda: [256, 64])
+    maxout_k: int = 3
