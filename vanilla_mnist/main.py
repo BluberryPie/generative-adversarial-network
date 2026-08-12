@@ -108,7 +108,7 @@ def main():
         stride=10,
     )
     plot_D_probs(D_real_probs, D_fake_probs, G_grad_norms)
-    make_animation(frames, Path(__file__).parent / config.result_dir / "animation.gif")
+    make_animation(frames, Path(__file__).parent / config.result_dir / "animation.gif", fps=20)
 
 
 if __name__ == "__main__":

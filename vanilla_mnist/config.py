@@ -18,5 +18,5 @@ class Config:
     G_learning_rate: float = 1e-2
     D_learning_rate: float = 1e-4
     momentum: float = 0.9
-    num_anim_frames: int = 10  # Number of snapshots to take for grid viz
+    num_anim_frames: int = 100  # Number of snapshots to take for grid viz
     nrows_per_grid: int = 10  # Grid size = (nrows_per_grid x nrows_per_grid)
