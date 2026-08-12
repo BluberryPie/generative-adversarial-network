@@ -40,10 +40,10 @@ def main():
     )
 
     optim_G = torch.optim.SGD(
-        params=G.parameters(), lr=config.learning_rate, momentum=config.momentum
+        params=G.parameters(), lr=config.G_learning_rate, momentum=config.momentum
     )
     optim_D = torch.optim.SGD(
-        params=D.parameters(), lr=config.learning_rate, momentum=config.momentum
+        params=D.parameters(), lr=config.D_learning_rate, momentum=config.momentum
     )
 
     bce_loss_fn = nn.BCELoss(reduction="mean")
