@@ -11,3 +11,5 @@ class Config:
     num_train_iterations: int = 100
     learning_rate: float = 2e-4
     adam_beta_1: float = 0.5
+    num_anim_frames: int = 10
+    nrows_per_grid: int = 10

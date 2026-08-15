@@ -1,19 +1,34 @@
 import logging
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
+import torchvision
 from tqdm import trange
 
 from config import Config
 from data import load_anime
 from model import Discriminator, Generator
+from visualize import make_animation
 
 
 def get_device() -> torch.device:
     if torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
+
+
+@torch.no_grad()
+def sample_grid(G: Generator, Z: torch.Tensor, nrows: int) -> np.ndarray:
+    G.eval()
+    generated_images = G(Z)
+    grid = torchvision.utils.make_grid(
+        generated_images, nrow=nrows, normalize=True, value_range=(-1, 1)
+    )
+    grid = grid.permute(1, 2, 0).cpu().numpy()
+    G.train()
+    return grid
 
 
 def main():
@@ -37,7 +52,10 @@ def main():
         D.parameters(), lr=config.learning_rate, betas=(config.adam_beta_1, 0.999)
     )
 
-    for _ in trange(config.num_train_iterations):
+    Z_fixed = torch.rand(size=(config.nrows_per_grid**2, config.latent_dim)).to(device) * 100000
+    frames: list[np.ndarray] = []
+
+    for i in trange(config.num_train_iterations):
         try:
             X = next(anime_loader_iter)
         except StopIteration:
@@ -47,7 +65,9 @@ def main():
         # Update D
         Z = torch.rand(size=(config.batch_size, config.latent_dim)).to(device)
         loss_D = bce_loss(D(X), torch.ones(config.batch_size, 1).to(device))
-        loss_D += bce_loss(D(G(Z).detach()), torch.zeros(config.batch_size, 1).to(device))
+        loss_D += bce_loss(
+            D(G(Z).detach()), torch.zeros(config.batch_size, 1).to(device)
+        )
         optim_D.zero_grad()
         loss_D.backward()
         optim_D.step()
@@ -57,6 +77,13 @@ def main():
         optim_G.zero_grad()
         loss_G.backward()
         optim_G.step()
+
+        if (i + 1) % (config.num_train_iterations // config.num_anim_frames) == 0:
+            frames.append(sample_grid(G, Z_fixed, nrows=config.nrows_per_grid))
+
+    make_animation(
+        frames, Path(__file__).parent / config.result_dir / "animation.gif", fps=20
+    )
 
 
 if __name__ == "__main__":
