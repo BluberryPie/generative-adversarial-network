@@ -10,7 +10,7 @@ from tqdm import trange
 from config import Config
 from data import load_anime
 from model import Discriminator, Generator
-from visualize import make_animation
+from visualize import make_animation, plot_D_probs, plot_loss_curves
 
 
 def get_device() -> torch.device:
@@ -52,6 +52,10 @@ def main():
         D.parameters(), lr=config.learning_rate, betas=(config.adam_beta_1, 0.999)
     )
 
+    G_losses: list[float] = []
+    D_losses: list[float] = []
+    D_real_probs: list[float] = []
+    D_fake_probs: list[float] = []
     Z_fixed = torch.rand(size=(config.nrows_per_grid**2, config.latent_dim)).to(device) * 100000
     frames: list[np.ndarray] = []
 
@@ -64,16 +68,22 @@ def main():
         X = X.to(device)
         # Update D
         Z = torch.rand(size=(config.batch_size, config.latent_dim)).to(device)
-        loss_D = bce_loss(D(X), torch.ones(config.batch_size, 1).to(device))
+        D_real_prob = D(X)
+        D_fake_prob = D(G(Z).detach())
+        loss_D = bce_loss(D_real_prob, torch.ones(config.batch_size, 1).to(device))
         loss_D += bce_loss(
-            D(G(Z).detach()), torch.zeros(config.batch_size, 1).to(device)
+            D_fake_prob, torch.zeros(config.batch_size, 1).to(device)
         )
+        D_losses.append(loss_D.item())
+        D_real_probs.append(D_real_prob.mean().item())
+        D_fake_probs.append(D_fake_prob.mean().item())
         optim_D.zero_grad()
         loss_D.backward()
         optim_D.step()
         # Update G
         Z = torch.rand(size=(config.batch_size, config.latent_dim)).to(device)
         loss_G = bce_loss(D(G(Z)), torch.ones(config.batch_size, 1).to(device))
+        G_losses.append(loss_G.item())
         optim_G.zero_grad()
         loss_G.backward()
         optim_G.step()
@@ -81,6 +91,8 @@ def main():
         if (i + 1) % (config.num_train_iterations // config.num_anim_frames) == 0:
             frames.append(sample_grid(G, Z_fixed, nrows=config.nrows_per_grid))
 
+    plot_loss_curves(G_losses, D_losses)
+    plot_D_probs(D_real_probs, D_fake_probs)
     make_animation(
         frames, Path(__file__).parent / config.result_dir / "animation.gif", fps=20
     )
