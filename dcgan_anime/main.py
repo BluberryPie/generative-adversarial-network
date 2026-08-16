@@ -56,7 +56,7 @@ def main():
     D_losses: list[float] = []
     D_real_probs: list[float] = []
     D_fake_probs: list[float] = []
-    Z_fixed = torch.rand(size=(config.nrows_per_grid**2, config.latent_dim)).to(device) * 100000
+    Z_fixed = torch.rand(size=(config.nrows_per_grid**2, config.latent_dim)).to(device)
     frames: list[np.ndarray] = []
 
     for i in trange(config.num_train_iterations):
@@ -70,7 +70,7 @@ def main():
         Z = torch.rand(size=(config.batch_size, config.latent_dim)).to(device)
         D_real_prob = D(X)
         D_fake_prob = D(G(Z).detach())
-        loss_D = bce_loss(D_real_prob, torch.ones(config.batch_size, 1).to(device))
+        loss_D = bce_loss(D_real_prob, torch.full((config.batch_size, 1), 0.9).to(device))
         loss_D += bce_loss(
             D_fake_prob, torch.zeros(config.batch_size, 1).to(device)
         )
